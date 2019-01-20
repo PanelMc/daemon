@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"encoding/json"
+	"github.com/heroslender/panelmc/config"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"log"
@@ -19,7 +20,7 @@ func GetServers() *ServerMap {
 
 func Init() {
 	serversPath := DataPath()
-	if err := os.MkdirAll(serversPath, 0744); err != nil {
+	if err := os.MkdirAll(serversPath, config.GetConfig().FolderPermissions); err != nil {
 		logrus.WithError(err).Fatal("Failed to create de servers data directory!")
 	}
 	logrus.Infof("Loading servers from '%s'...", serversPath)
@@ -80,7 +81,7 @@ func Start() {
 }
 
 func saveServerConfig(server *ServerStruct) error {
-	if err := os.MkdirAll(server.DataPath(), 0744); err != nil {
+	if err := os.MkdirAll(server.DataPath(), config.GetConfig().FolderPermissions); err != nil {
 		return err
 	}
 
@@ -88,7 +89,7 @@ func saveServerConfig(server *ServerStruct) error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(server.ConfigFilePath(), serverJSON, 0644); err != nil {
+	if err := ioutil.WriteFile(server.ConfigFilePath(), serverJSON, config.GetConfig().FilePermissions); err != nil {
 		return err
 	}
 	return nil

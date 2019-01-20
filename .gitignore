@@ -4,3 +4,5 @@ data/
 \.idea/
 
 config\.hcl
+
+config\.json

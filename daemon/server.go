@@ -3,7 +3,6 @@ package daemon
 import (
 	"github.com/heroslender/panelmc/config"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 	"path/filepath"
 )
 
@@ -56,13 +55,13 @@ func (s *ServerStruct) Execute(command string) error {
 }
 
 func DataPath() string {
-	dataPath, err := filepath.Abs(viper.GetString(config.DATA_PATH))
+	dataPath, err := filepath.Abs(config.GetConfig().DataPath)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to get absolute data path for server.")
-		dataPath = viper.GetString(config.DATA_PATH)
+		dataPath = config.GetConfig().DataPath
 	}
 
-	return filepath.Join(dataPath, viper.GetString(config.SERVERS_PATH))
+	return filepath.Join(dataPath)
 }
 
 func (s *ServerStruct) DataPath() string {

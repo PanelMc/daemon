@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/heroslender/panelmc/constants"
+	"github.com/heroslender/panelmc/config"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
@@ -26,7 +26,7 @@ func NewToken() string {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	key, err := jwt.ParseRSAPrivateKeyFromPEM(constants.PEM_RSA_PRIVATE_KEY)
+	key, err := jwt.ParseRSAPrivateKeyFromPEM(config.GetConfig().JWT.PrivateKey)
 	if err != nil {
 		logrus.WithField("auth", "jwt").WithError(err).Error("Failed to parse the RSA Private Key!")
 		return ""
@@ -50,6 +50,7 @@ func VerifyRequest(r *http.Request) error {
 	}
 
 	if token, err := Verify(token); err != nil {
+		logrus.WithField("auth", "jwt").WithError(err).Error("Failed to verify Token!")
 		return err
 	} else {
 		newRequest := r.WithContext(context.WithValue(r.Context(), "jwt", token))
@@ -66,7 +67,7 @@ func Verify(token string) (*jwt.Token, error) {
 	}
 
 	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		return jwt.ParseRSAPublicKeyFromPEM(constants.PEM_RSA_KEY)
+		return jwt.ParseRSAPublicKeyFromPEM(config.GetConfig().JWT.PublicKey)
 	})
 
 	if err != nil {
