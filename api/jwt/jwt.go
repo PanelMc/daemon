@@ -43,11 +43,16 @@ func NewToken() string {
 }
 
 func VerifyRequest(r *http.Request) error {
-	token := r.URL.Query().Get("token")
+	token := r.Header.Get("Authorization")
+	if token == "" {
+		// If not found on headers, get from url query
+		token = r.URL.Query().Get("Authorization")
+	}
 
 	if token == "" {
 		return errors.New("Required authorization token not found")
 	}
+	token = token[7:]
 
 	if token, err := Verify(token); err != nil {
 		logrus.WithField("auth", "jwt").WithError(err).Error("Failed to verify Token!")

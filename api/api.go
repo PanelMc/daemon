@@ -1,50 +1,68 @@
 package api
 
 import (
+	"fmt"
+	jwt2 "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/heroslender/panelmc/api/jwt"
-	"github.com/heroslender/panelmc/api/socket"
-	"github.com/sirupsen/logrus"
+	"github.com/heroslender/panelmc/daemon"
 	"net/http"
 )
 
-func Init() {
-	router := gin.New()
-
-	//router.Use(gin.Logger())
-	// Recover from a panic call :)
-	router.Use(gin.Recovery())
-
-	router.LoadHTMLGlob("api/views/*")
-
-	router.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.tmpl", gin.H{})
+func initApiRouter(api *gin.RouterGroup) {
+	api.Use(func(c *gin.Context) {
+		if err := jwt.VerifyRequest(c.Request); err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": gin.H{
+					"error":   "unauthorized",
+					"message": "You need to login to access this content.",
+				},
+			})
+		}
 	})
-	router.GET("/login", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"jwt": jwt.NewToken()})
+	api.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"user": c.Request.Context().Value("jwt").(*jwt2.Token).Claims,
+		})
 	})
-	// Testing view for the socket
-	router.GET("/console", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "console.tmpl", gin.H{"token": jwt.NewToken()})
-	})
-
-	// socket connection
-	if err := socket.Init(); err == nil {
-		router.GET("/socket.io/", socket.Handler())
-		router.POST("/socket.io/", socket.Handler())
-		router.Handle("WS", "/socket.io", socket.Handler())
-		router.Handle("WSS", "/socket.io", socket.Handler())
-		getLogger().Info("Registered the socket!")
-	}
-
-	if err := router.Run(":8080"); err != nil {
-		getLogger().WithError(err).Error("Failed to start the daemon API.")
-	}
-
-	getLogger().Info("Listening on port 8080!")
+	api.GET("/servers", listServers)
+	api.GET("/servers/:server", getServer)
 }
 
+func listServers(c *gin.Context) {
+	servers := daemon.GetServers()
+	if len(*servers) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"error":   "no_servers_loaded",
+				"message": "There are no servers loaded.",
+			},
+		})
+		return
+	}
 
-func getLogger() *logrus.Entry {
-	return logrus.WithField("logger", "API")
+	c.JSON(http.StatusOK, gin.H{
+		"data": servers,
+	})
+}
+
+func getServer(c *gin.Context) {
+	server := c.Param("server")
+	servers := daemon.GetServers()
+
+	for _, s := range *servers {
+		if s.Id == server || s.Name == server {
+			c.JSON(http.StatusOK, gin.H{
+				"data": s,
+			})
+			return
+		}
+	}
+
+	c.JSON(http.StatusBadRequest, gin.H{
+		"error": gin.H{
+			"error":   "server_not_fount",
+			"message": fmt.Sprintf("The server '%s' wasn't found.", server),
+		},
+	})
 }

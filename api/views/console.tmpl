@@ -62,7 +62,7 @@
         const socket = io('http://localhost:8080', {
             query: {
                 server: "rankup",
-                token: "{{ .token }}"
+                Authorization: "Bearer {{ .token }}"
             }
         });
         console.log("Connecting...");
