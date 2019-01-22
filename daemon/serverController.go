@@ -18,6 +18,28 @@ func GetServers() *ServerMap {
 	return &servers
 }
 
+// Get a server by it's id. If no server found, return nil
+func GetServerById(id string) *ServerStruct {
+	for _, s := range servers {
+		if s.Id == id {
+			return s
+		}
+	}
+
+	return nil
+}
+
+// Get a server by it's id or name. If no server found, return nil
+func GetServer(server string) *ServerStruct {
+	for _, s := range servers {
+		if s.Id == server || s.Name == server {
+			return s
+		}
+	}
+
+	return nil
+}
+
 func Init() {
 	serversPath := DataPath()
 	if err := os.MkdirAll(serversPath, config.GetConfig().FolderPermissions); err != nil {
@@ -73,7 +95,7 @@ func Init() {
 }
 
 func Start() {
-	for _, server := range servers{
+	for _, server := range servers {
 		if err := server.Start(); err != nil {
 			logrus.WithField("server", server.Id).WithError(err).Error("There was an error while trying to start the server.")
 		}

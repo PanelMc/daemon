@@ -48,21 +48,17 @@ func listServers(c *gin.Context) {
 
 func getServer(c *gin.Context) {
 	server := c.Param("server")
-	servers := daemon.GetServers()
 
-	for _, s := range *servers {
-		if s.Id == server || s.Name == server {
-			c.JSON(http.StatusOK, gin.H{
-				"data": s,
-			})
-			return
-		}
+	if s := daemon.GetServer(server); s != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"data": s,
+		})
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"error":   "server_not_fount",
+				"message": fmt.Sprintf("The server '%s' wasn't found.", server),
+			},
+		})
 	}
-
-	c.JSON(http.StatusBadRequest, gin.H{
-		"error": gin.H{
-			"error":   "server_not_fount",
-			"message": fmt.Sprintf("The server '%s' wasn't found.", server),
-		},
-	})
 }
