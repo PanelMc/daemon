@@ -39,8 +39,7 @@ func init() {
 	config.Init()
 	daemon.Init()
 
-	// Do not block pls :)
-	go api.Init()
+	api.Init()
 
 	daemon.Start()
 
