@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/gin"
 	"github.com/heroslender/panelmc/config"
 	"github.com/sirupsen/logrus"
 	"net/http"
@@ -42,6 +43,19 @@ func NewToken() string {
 	return tokenString
 }
 
+func GinHandler(c *gin.Context) {
+	if err := VerifyRequest(c.Request); err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"error": gin.H{
+				"error":   "unauthorized",
+				//"message": "You need to login to access this content.",
+				// TODO remove for produtction
+				"message": err.Error(),
+			},
+		})
+	}
+}
+
 func VerifyRequest(r *http.Request) error {
 	token := r.Header.Get("Authorization")
 	if token == "" {
@@ -58,7 +72,7 @@ func VerifyRequest(r *http.Request) error {
 		logrus.WithField("auth", "jwt").WithError(err).Error("Failed to verify Token!")
 		return err
 	} else {
-		newRequest := r.WithContext(context.WithValue(r.Context(), "jwt", token))
+		newRequest := r.WithContext(context.WithValue(r.Context(), "jwt", token.Claims.(*TokenClaims)))
 		// UpdateStats the current request with the new context information.
 		*r = *newRequest
 	}

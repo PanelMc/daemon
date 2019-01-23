@@ -107,7 +107,12 @@ func saveServerConfig(server *ServerStruct) error {
 		return err
 	}
 
-	serverJSON, err := json.MarshalIndent(server, "", "  ")
+
+	// Prevent stats from saving to config, but keep them on the API
+	toSave := *server
+	toSave.Stats = nil
+
+	serverJSON, err := json.MarshalIndent(&toSave, "", "  ")
 	if err != nil {
 		return err
 	}

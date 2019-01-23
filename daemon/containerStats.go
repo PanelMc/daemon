@@ -6,14 +6,13 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/docker/docker/api/types"
-	"github.com/heroslender/panelmc/api/socket"
 	"github.com/sirupsen/logrus"
 	"io"
 	"strings"
 	"time"
 )
 
-func (c *DockerContainerStruct) attachStats() chan socket.ContainerStats {
+func (c *DockerContainerStruct) attachStats() chan ContainerStats {
 	c.attachedStats = true
 	stats, err := c.client.ContainerStats(context.TODO(), c.ContainerId, true)
 	if err != nil {
@@ -21,7 +20,7 @@ func (c *DockerContainerStruct) attachStats() chan socket.ContainerStats {
 		c.attachedStats = false
 	}
 
-	callback := make(chan socket.ContainerStats)
+	callback := make(chan ContainerStats)
 	dec := json.NewDecoder(stats.Body)
 	go func() {
 		defer stats.Body.Close()
@@ -77,7 +76,7 @@ func (c *DockerContainerStruct) attachStats() chan socket.ContainerStats {
 				mem = float64(v.MemoryStats.PrivateWorkingSet)
 			}
 			netRx, netTx := calculateNetwork(v.Networks)
-			callback <- socket.ContainerStats{
+			callback <- ContainerStats{
 				CPUPercentage:    cpuPercent,
 				Memory:           mem,
 				MemoryPercentage: memPerc,

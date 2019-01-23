@@ -1,35 +1,20 @@
-package api
+package routes
 
 import (
 	"fmt"
-	jwt2 "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/heroslender/panelmc/api/jwt"
 	"github.com/heroslender/panelmc/daemon"
 	"net/http"
 )
 
-func initApiRouter(api *gin.RouterGroup) {
-	api.Use(func(c *gin.Context) {
-		if err := jwt.VerifyRequest(c.Request); err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": gin.H{
-					"error":   "unauthorized",
-					"message": "You need to login to access this content.",
-				},
-			})
-		}
+func Index(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"user": c.Request.Context().Value("jwt").(*jwt.TokenClaims),
 	})
-	api.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"user": c.Request.Context().Value("jwt").(*jwt2.Token).Claims,
-		})
-	})
-	api.GET("/servers", listServers)
-	api.GET("/servers/:server", getServer)
 }
 
-func listServers(c *gin.Context) {
+func ListServers(c *gin.Context) {
 	servers := daemon.GetServers()
 	if len(*servers) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -46,7 +31,7 @@ func listServers(c *gin.Context) {
 	})
 }
 
-func getServer(c *gin.Context) {
+func GetServer(c *gin.Context) {
 	server := c.Param("server")
 
 	if s := daemon.GetServer(server); s != nil {

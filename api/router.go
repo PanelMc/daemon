@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/heroslender/panelmc/api/jwt"
+	"github.com/heroslender/panelmc/api/routes"
 	"github.com/heroslender/panelmc/api/socket"
 	"github.com/sirupsen/logrus"
 	"net/http"
@@ -29,7 +30,12 @@ func Init() {
 	})
 
 	api := router.Group("/api")
-	initApiRouter(api)
+	{
+		api.Use(jwt.GinHandler)
+		api.GET("/", routes.Index)
+		api.GET("/servers", routes.ListServers)
+		api.GET("/servers/:server", routes.GetServer)
+	}
 
 	// socket connection
 	if err := socket.Init(); err == nil {

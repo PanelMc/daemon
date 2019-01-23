@@ -10,6 +10,7 @@ func (s *ServerStruct) Start() error {
 	if err := s.Container.Start(); err != nil {
 		return err
 	}
+
 	return nil
 }
 

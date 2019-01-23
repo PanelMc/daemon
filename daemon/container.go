@@ -8,7 +8,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/heroslender/panelmc/api/socket"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io"
 	"strings"
@@ -59,6 +59,9 @@ func NewDockerContainer(s *ServerStruct) error {
 	s.Container.attached = false
 	s.Container.server = s
 	s.Container.client = cli
+	s.Stats = &ServerStats{
+		Status: ServerStatusOffline,
+	}
 
 	if _, err := cli.ContainerInspect(context.TODO(), s.Container.ContainerId); err != nil {
 		// Container wasn't found, setting to an empty string to create a new one later
@@ -158,7 +161,7 @@ func (c *DockerContainerStruct) Attach() error {
 	}
 	c.attached = true
 
-	serverRoom := socket.ServerRoom{
+	serverRoom := ContainerListener{
 		ServerId: c.server.Id,
 	}
 
@@ -177,7 +180,7 @@ func (c *DockerContainerStruct) Attach() error {
 		if !c.attachedStats {
 			stats := c.attachStats()
 			for {
-				serverRoom.UpdateStats(<- stats)
+				serverRoom.UpdateStats(<-stats)
 			}
 		}
 	}()
@@ -185,6 +188,10 @@ func (c *DockerContainerStruct) Attach() error {
 }
 
 func (c *DockerContainerStruct) Start() error {
+	if c.server.Stats.Status != ServerStatusOffline {
+		return errors.New(fmt.Sprintf("Server already running. Current status: %s", c.server.Stats.Status))
+	}
+
 	logrus.WithField("server", c.server.Id).Debug("Starting the server...")
 	if err := c.Attach(); err != nil {
 		logrus.WithError(err).Error("Failed to attach to the docker container.")
@@ -194,16 +201,26 @@ func (c *DockerContainerStruct) Start() error {
 		logrus.WithField("server", c.server.Id).Error("Failed to start the docker container.")
 		return err
 	}
+	c.server.Stats.Status = ServerStatusStarting
 	return nil
 }
 
 func (c *DockerContainerStruct) Stop() error {
+	if c.server.Stats.Status != ServerStatusOnline {
+		return ApiError{
+			Err:     "stop_server_not_running",
+			Message: fmt.Sprintf("Server isn't running. Current status: %s", c.server.Stats.Status),
+		}
+	}
+
 	timeout := time.Duration(time.Second * 15)
 
 	if err := c.client.ContainerStop(context.TODO(), c.server.Container.ContainerId, &timeout); err != nil {
 		logrus.WithField("server", c.server.Id).Error("Failed to stop the docker container.")
 		return err
 	}
+
+	c.server.Stats.Status = ServerStatusStopping
 	return nil
 }
 

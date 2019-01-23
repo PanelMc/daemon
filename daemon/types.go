@@ -18,18 +18,20 @@ type Server interface {
 }
 
 type ServerStruct struct {
-	Id   string `json:"id" jsonapi:"primary,id"`
-	Name string `json:"name" jsonapi:"attr,name"`
+	Id   string `json:"id"`
+	Name string `json:"name"`
 
-	Settings ServerSettings `json:"settings" jsonapi:"relation,settings"`
+	Settings ServerSettings `json:"settings"`
 
-	Container DockerContainerStruct `json:"container" jsonapi:"relation,container"`
+	Stats *ServerStats `json:"stats,omitempty"`
+
+	Container DockerContainerStruct `json:"container"`
 }
 
 type ServerSettings struct {
-	Ram   string `json:"ram" jsonapi:"attr,ram"`
-	Swap  string `json:"swap" jsonapi:"attr,ram"`
-	Ports []int  `json:"ports" jsonapi:"attr,name"`
+	Ram   string `json:"ram"`
+	Swap  string `json:"swap"`
+	Ports []int  `json:"ports"`
 }
 
 var _ Server = &ServerStruct{}
@@ -58,3 +60,37 @@ type DockerContainerStruct struct {
 }
 
 var _ DockerContainer = &DockerContainerStruct{}
+
+type ServerStats struct {
+	Status ServerStatus   `json:"status"`
+	Usage  ContainerStats `json:"usage"`
+}
+
+type ContainerStats struct {
+	CPUPercentage    float64
+	Memory           float64
+	MemoryPercentage float64
+	MemoryLimit      float64
+	NetworkDownload  float64
+	NetworkUpload    float64
+	DiscRead         float64
+	DiscWrite        float64
+}
+
+type ServerStatus string
+
+const (
+	ServerStatusOnline   ServerStatus = "online"
+	ServerStatusStarting ServerStatus = "starting"
+	ServerStatusOffline  ServerStatus = "offline"
+	ServerStatusStopping ServerStatus = "stopping"
+)
+
+type ApiError struct {
+	Err   string `json:"error"`
+	Message string `json:"message"`
+}
+
+func (e ApiError) Error() string {
+	return e.Message
+}
