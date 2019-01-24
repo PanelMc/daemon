@@ -3,14 +3,13 @@ package routes
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/heroslender/panelmc/api/jwt"
 	"github.com/heroslender/panelmc/daemon"
 	"net/http"
 )
 
 func Index(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"user": c.Request.Context().Value("jwt").(*jwt.TokenClaims),
+		"user": c.Request.Context().Value("jwt"),
 	})
 }
 

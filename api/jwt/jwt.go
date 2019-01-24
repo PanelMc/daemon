@@ -72,7 +72,7 @@ func VerifyRequest(r *http.Request) error {
 		logrus.WithField("auth", "jwt").WithError(err).Error("Failed to verify Token!")
 		return err
 	} else {
-		newRequest := r.WithContext(context.WithValue(r.Context(), "jwt", token.Claims.(*TokenClaims)))
+		newRequest := r.WithContext(context.WithValue(r.Context(), "jwt", token.Claims.(jwt.MapClaims)))
 		// UpdateStats the current request with the new context information.
 		*r = *newRequest
 	}

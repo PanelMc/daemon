@@ -79,6 +79,10 @@ type ContainerStats struct {
 
 type ServerStatus string
 
+func (s ServerStatus) String() string {
+	return string(s)
+}
+
 const (
 	ServerStatusOnline   ServerStatus = "online"
 	ServerStatusStarting ServerStatus = "starting"

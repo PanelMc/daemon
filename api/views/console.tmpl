@@ -73,7 +73,7 @@
 
         socket.on('console_output', (data) => {
             console.log('console_output!', data);
-            $("#console").html($("#console").html() += "<br>" + data.line)
+            $("#console").html($("#console").html() + "<br>" + data.line)
         });
 
         socket.on('stats_update', (data) => {

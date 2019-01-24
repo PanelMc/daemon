@@ -14,12 +14,6 @@ type ContainerListener struct {
 	ServerId string `json:"server_id"`
 }
 
-type serverConsolePayload struct {
-	ServerId string `json:"server_id"`
-
-	Line string `json:"line"`
-}
-
 var _ io.Writer = ContainerListener{}
 
 // To copy stdout from the docker container, and read directly
@@ -42,19 +36,11 @@ func (c ContainerListener) Write(b []byte) (n int, e error) {
 		line = strings.Replace(line, "\n", "", -1)
 	}
 
-	payload := serverConsolePayload{c.ServerId, line}
-	logrus.WithField("server", c.ServerId).WithField("event", "Console").
-		Infof("%#v", line)
-	//Infof("%s", payload)
-	socket.Server.BroadcastTo(c.ServerId, "console_output", payload)
+	payload := socket.ServerConsolePayload{c.ServerId, line}
+	logrus.WithField("server", c.ServerId).WithField("event", "Console").Infof("%#v", line)
+	socket.BroadcastTo(c.ServerId, "console_output", payload)
 
 	return len(b), nil
-}
-
-type ServerStatsPayload struct {
-	ServerId string `json:"server_id"`
-
-	Stats gin.H `json:"stats"`
 }
 
 func (c *ContainerListener) UpdateStats(stats ContainerStats) {
@@ -69,5 +55,5 @@ func (c *ContainerListener) UpdateStats(stats ContainerStats) {
 		"DiscWrite":        bytefmt.ByteSize(uint64(stats.DiscWrite)),
 	}
 
-	socket.Server.BroadcastTo(c.ServerId, "stats_update", ServerStatsPayload{c.ServerId, fStats})
+	socket.BroadcastTo(c.ServerId, "stats_update", socket.ServerStatsUpdatePayload{c.ServerId, fStats})
 }

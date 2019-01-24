@@ -7,25 +7,25 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var Server *socketio.Server
+var socket *socketio.Server
 
 func Init() error {
-	server, err := socketio.NewServer(nil)
+	var err error
+	socket, err = socketio.NewServer(nil)
 	if err != nil {
 		logrus.WithError(err).Error("can't create socker server.")
 		return err
 	}
-	Server = server
 
-	Server.SetAllowRequest(jwt.VerifyRequest)
-
-	Server.On("connection", func(so socketio.Socket) {
+	socket.SetAllowRequest(jwt.VerifyRequest)
+	socket.On("connection", func(so socketio.Socket) {
 		serverName := so.Request().FormValue("server")
 		if serverName != "" {
 			so.Join(serverName)
 			logrus.Infof("User connected to %s!", serverName)
 		}
 
+		so.Join("global")
 		so.Emit("connected")
 
 		so.On("console_input", func(msg string) {
@@ -37,19 +37,31 @@ func Init() error {
 		})
 	})
 
-	Server.On("error", func(so socketio.Socket, err error) {
+	socket.On("error", func(so socketio.Socket, err error) {
 		logrus.WithError(err).Error("socker server error.")
 	})
 
 	return nil
 }
 
-// Handler initializes the prometheus middleware.
+// Handler to register on Gin.
 func Handler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
 		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Header("Access-Control-Allow-Origin", origin)
-		Server.ServeHTTP(c.Writer, c.Request)
+		socket.ServeHTTP(c.Writer, c.Request)
+	}
+}
+
+// Broadcast a message to everyone
+func Broadcast(event string, messages ...interface{}) {
+	BroadcastTo("global", event, messages)
+}
+
+// Broadcast a message to everyone in a specific room
+func BroadcastTo(room, event string, messages ...interface{}) {
+	if socket != nil {
+		socket.BroadcastTo(room, event, messages)
 	}
 }

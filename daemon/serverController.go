@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"encoding/json"
+	"github.com/heroslender/panelmc/api/socket"
 	"github.com/heroslender/panelmc/config"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
@@ -107,7 +108,6 @@ func saveServerConfig(server *ServerStruct) error {
 		return err
 	}
 
-
 	// Prevent stats from saving to config, but keep them on the API
 	toSave := *server
 	toSave.Stats = nil
@@ -124,4 +124,14 @@ func saveServerConfig(server *ServerStruct) error {
 
 func (s *ServerStruct) Save() error {
 	return saveServerConfig(s)
+}
+
+func (s *ServerStruct) UpdateStatus(status ServerStatus) {
+	if s.Stats.Status != status {
+		s.Stats.Status = status
+		socket.Broadcast("server_status_update", socket.ServerStatusUpdatePayload{
+			ServerId: s.Id,
+			Status:   status.String(),
+		})
+	}
 }
