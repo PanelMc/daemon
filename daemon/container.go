@@ -62,7 +62,8 @@ func NewDockerContainer(s *ServerStruct) error {
 	s.Container.server = s
 	s.Container.client = cli
 	s.Stats = &ServerStats{
-		Status: ServerStatusOffline,
+		Status:        ServerStatusOffline,
+		OnlinePlayers: []*Player{},
 	}
 
 	if _, err := cli.ContainerInspect(context.TODO(), s.Container.ContainerId); err != nil {

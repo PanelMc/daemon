@@ -76,14 +76,14 @@ type ServerStats struct {
 }
 
 type ContainerStats struct {
-	CPUPercentage    float64
-	Memory           float64
-	MemoryPercentage float64
-	MemoryLimit      float64
-	NetworkDownload  float64
-	NetworkUpload    float64
-	DiscRead         float64
-	DiscWrite        float64
+	CPUPercentage    float64 `json:"cpu_percentage"`
+	Memory           float64 `json:"memory"`
+	MemoryPercentage float64 `json:"memory_percentage"`
+	MemoryLimit      float64 `json:"memory_limit"`
+	NetworkDownload  float64 `json:"network_download"`
+	NetworkUpload    float64 `json:"network_upload"`
+	DiscRead         float64 `json:"disc_read"`
+	DiscWrite        float64 `json:"disc_write"`
 }
 
 type ServerStatus string

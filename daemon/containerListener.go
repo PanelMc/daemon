@@ -41,15 +41,16 @@ func (s *ServerStruct) Write(b []byte) (n int, e error) {
 }
 
 func (s *ServerStruct) UpdateStats(stats ContainerStats) {
+	s.Stats.Usage = stats
 	fStats := gin.H{
-		"CPUPercentage":    fmt.Sprintf("%.2f", stats.CPUPercentage),
-		"MemoryPercentage": fmt.Sprintf("%.2f", stats.MemoryPercentage),
-		"Memory":           bytefmt.ByteSize(uint64(stats.Memory)),
-		"MemoryLimit":      bytefmt.ByteSize(uint64(stats.MemoryLimit)),
-		"NetworkDownload":  bytefmt.ByteSize(uint64(stats.NetworkDownload)),
-		"NetworkUpload":    bytefmt.ByteSize(uint64(stats.NetworkUpload)),
-		"DiscRead":         bytefmt.ByteSize(uint64(stats.DiscRead)),
-		"DiscWrite":        bytefmt.ByteSize(uint64(stats.DiscWrite)),
+		"cpu_percentage":    fmt.Sprintf("%.2f", stats.CPUPercentage),
+		"memory_percentage": fmt.Sprintf("%.2f", stats.MemoryPercentage),
+		"memory":           bytefmt.ByteSize(uint64(stats.Memory)),
+		"memory_limit":      bytefmt.ByteSize(uint64(stats.MemoryLimit)),
+		"network_download":  bytefmt.ByteSize(uint64(stats.NetworkDownload)),
+		"network_upload":    bytefmt.ByteSize(uint64(stats.NetworkUpload)),
+		"disc_read":         bytefmt.ByteSize(uint64(stats.DiscRead)),
+		"disc_write":        bytefmt.ByteSize(uint64(stats.DiscWrite)),
 	}
 
 	socket.BroadcastTo(s.Id, "stats_update", socket.ServerStatsUpdatePayload{s.Id, fStats})
