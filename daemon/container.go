@@ -174,17 +174,13 @@ func (c *DockerContainerStruct) Attach() error {
 	}
 	c.attached = true
 
-	serverRoom := &ContainerListener{
-		ServerId: c.server.Id,
-	}
-
 	go func() {
 		defer c.hijackedResponse.Close()
 		defer func() {
 			c.attached = false
 		}()
 
-		if _, err := io.Copy(serverRoom, c.hijackedResponse.Reader); err != nil {
+		if _, err := io.Copy(c.server, c.hijackedResponse.Reader); err != nil {
 			logrus.WithField("server", c.server.Id).WithError(err).Error("Failed to attach to the server serverRoom!")
 		}
 	}()
@@ -193,7 +189,7 @@ func (c *DockerContainerStruct) Attach() error {
 		if !c.attachedStats {
 			stats := c.attachStats()
 			for {
-				serverRoom.UpdateStats(<-stats)
+				c.server.UpdateStats(<-stats)
 			}
 		}
 	}()

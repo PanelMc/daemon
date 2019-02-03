@@ -1,6 +1,8 @@
 package socket
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+)
 
 type ServerConsolePayload struct {
 	ServerId string `json:"server_id"`
@@ -18,4 +20,16 @@ type ServerStatusUpdatePayload struct {
 	ServerId string `json:"server_id"`
 
 	Status string `json:"status"`
+}
+
+type ServerPlayerJoinPayload struct {
+	ServerId string `json:"server_id"`
+
+	Player interface{} `json:"player"`
+}
+
+type ServerPlayerLeavePayload struct {
+	ServerId string `json:"server_id"`
+
+	Player interface{} `json:"player"`
 }

@@ -10,14 +10,10 @@ import (
 	"strings"
 )
 
-type ContainerListener struct {
-	ServerId string `json:"server_id"`
-}
-
-var _ io.Writer = &ContainerListener{}
+var _ io.Writer = &ServerStruct{}
 
 // To copy stdout from the docker container, and read directly
-func (c *ContainerListener) Write(b []byte) (n int, e error) {
+func (s *ServerStruct) Write(b []byte) (n int, e error) {
 	//l := make([]byte, len(b))
 	//copy(l, b)
 	line := string(b)
@@ -36,14 +32,15 @@ func (c *ContainerListener) Write(b []byte) (n int, e error) {
 		line = strings.Replace(line, "\n", "", -1)
 	}
 
-	payload := socket.ServerConsolePayload{c.ServerId, line}
-	logrus.WithField("server", c.ServerId).WithField("event", "Console").Infof("%#v", line)
-	socket.BroadcastTo(c.ServerId, "console_output", payload)
+	processConsoleOutput(s, line)
+	payload := socket.ServerConsolePayload{s.Id, line}
+	logrus.WithField("server", s.Id).WithField("event", "Console").Infof("%#v", line)
+	socket.BroadcastTo(s.Id, "console_output", payload)
 
 	return len(b), nil
 }
 
-func (c *ContainerListener) UpdateStats(stats ContainerStats) {
+func (s *ServerStruct) UpdateStats(stats ContainerStats) {
 	fStats := gin.H{
 		"CPUPercentage":    fmt.Sprintf("%.2f", stats.CPUPercentage),
 		"MemoryPercentage": fmt.Sprintf("%.2f", stats.MemoryPercentage),
@@ -55,5 +52,5 @@ func (c *ContainerListener) UpdateStats(stats ContainerStats) {
 		"DiscWrite":        bytefmt.ByteSize(uint64(stats.DiscWrite)),
 	}
 
-	socket.BroadcastTo(c.ServerId, "stats_update", socket.ServerStatsUpdatePayload{c.ServerId, fStats})
+	socket.BroadcastTo(s.Id, "stats_update", socket.ServerStatsUpdatePayload{s.Id, fStats})
 }

@@ -20,6 +20,7 @@ type Server interface {
 type ServerStruct struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
+	Type string `json:"type"`
 
 	willRestart bool
 
@@ -28,6 +29,11 @@ type ServerStruct struct {
 	Stats *ServerStats `json:"stats,omitempty"`
 
 	Container DockerContainerStruct `json:"container"`
+}
+
+type Player struct {
+	Name string `json:"name"`
+	Ip   string `json:"ip"`
 }
 
 type ServerSettings struct {
@@ -64,8 +70,9 @@ type DockerContainerStruct struct {
 var _ DockerContainer = &DockerContainerStruct{}
 
 type ServerStats struct {
-	Status ServerStatus   `json:"status"`
-	Usage  ContainerStats `json:"usage"`
+	Status        ServerStatus   `json:"status"`
+	OnlinePlayers []*Player       `json:"online_players"`
+	Usage         ContainerStats `json:"usage"`
 }
 
 type ContainerStats struct {
