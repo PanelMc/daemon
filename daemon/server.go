@@ -1,9 +1,11 @@
 package daemon
 
 import (
+	"github.com/heroslender/panelmc/api/socket"
 	"github.com/heroslender/panelmc/config"
 	"github.com/sirupsen/logrus"
 	"path/filepath"
+	"time"
 )
 
 func (s *ServerStruct) Start() error {
@@ -11,6 +13,7 @@ func (s *ServerStruct) Start() error {
 		return err
 	}
 
+	s.UpdateStatus(ServerStatusStarting)
 	return nil
 }
 
@@ -19,6 +22,7 @@ func (s *ServerStruct) Stop() error {
 		return err
 	}
 
+	s.UpdateStatus(ServerStatusStopping)
 	return nil
 }
 
@@ -86,4 +90,26 @@ func (s *ServerStruct) Init() error {
 		}
 	}
 	return nil
+}
+
+func (s *ServerStruct) onDie() {
+	s.UpdateStatus(ServerStatusOffline)
+
+	if s.willRestart {
+		payload := socket.ServerConsolePayload{
+			ServerId: s.Id,
+			Line:     "Server stopped! Restarting in 5 seconds...",
+		}
+		logrus.WithField("server", s.Id).WithField("event", "Console").Info(payload.Line)
+		socket.BroadcastTo(s.Id, "console_output", payload)
+
+		go func() {
+			time.Sleep(5 * time.Second)
+			if s.Stats.Status == ServerStatusOffline {
+				if err := s.Start(); err != nil {
+					logrus.WithField("server", s.Id).WithError(err).Error("There was an error while trying to start the server.")
+				}
+			}
+		}()
+	}
 }

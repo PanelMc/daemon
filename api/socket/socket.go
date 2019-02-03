@@ -56,12 +56,12 @@ func Handler() gin.HandlerFunc {
 
 // Broadcast a message to everyone
 func Broadcast(event string, messages ...interface{}) {
-	BroadcastTo("global", event, messages)
+	BroadcastTo("global", event, messages...)
 }
 
 // Broadcast a message to everyone in a specific room
 func BroadcastTo(room, event string, messages ...interface{}) {
 	if socket != nil {
-		socket.BroadcastTo(room, event, messages)
+		socket.BroadcastTo(room, event, messages...)
 	}
 }

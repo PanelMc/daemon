@@ -14,10 +14,10 @@ type ContainerListener struct {
 	ServerId string `json:"server_id"`
 }
 
-var _ io.Writer = ContainerListener{}
+var _ io.Writer = &ContainerListener{}
 
 // To copy stdout from the docker container, and read directly
-func (c ContainerListener) Write(b []byte) (n int, e error) {
+func (c *ContainerListener) Write(b []byte) (n int, e error) {
 	//l := make([]byte, len(b))
 	//copy(l, b)
 	line := string(b)

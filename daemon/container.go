@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/events"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/pkg/errors"
@@ -142,6 +144,17 @@ func (c *DockerContainerStruct) Create() error {
 	return nil
 }
 
+func (c *DockerContainerStruct) listen() (<-chan events.Message, <-chan error) {
+	args := filters.NewArgs()
+	args.Add("type", events.ContainerEventType)
+	args.Add("container", c.ContainerId)
+	args.Add("event", "die")
+
+	return c.client.Events(context.TODO(), types.EventsOptions{
+		Filters: args,
+	})
+}
+
 func (c *DockerContainerStruct) Attach() error {
 	if c.attached {
 		return nil
@@ -161,7 +174,7 @@ func (c *DockerContainerStruct) Attach() error {
 	}
 	c.attached = true
 
-	serverRoom := ContainerListener{
+	serverRoom := &ContainerListener{
 		ServerId: c.server.Id,
 	}
 
@@ -184,6 +197,27 @@ func (c *DockerContainerStruct) Attach() error {
 			}
 		}
 	}()
+
+	go func() {
+		msg, err := c.listen()
+
+		go func() {
+			for {
+				select {
+				case message := <-msg:
+					if message.ID == c.ContainerId {
+						if message.Status == "die" {
+							c.server.onDie()
+						}
+					}
+					break
+				case erro := <-err:
+					logrus.WithField("server", c.server.Id).WithError(erro).Error("An error ocurred on the docker listener.")
+					break
+				}
+			}
+		}()
+	}()
 	return nil
 }
 
@@ -201,7 +235,7 @@ func (c *DockerContainerStruct) Start() error {
 		logrus.WithField("server", c.server.Id).Error("Failed to start the docker container.")
 		return err
 	}
-	c.server.Stats.Status = ServerStatusStarting
+
 	return nil
 }
 
@@ -220,7 +254,6 @@ func (c *DockerContainerStruct) Stop() error {
 		return err
 	}
 
-	c.server.Stats.Status = ServerStatusStopping
 	return nil
 }
 

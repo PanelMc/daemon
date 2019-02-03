@@ -21,6 +21,8 @@ type ServerStruct struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
 
+	willRestart bool
+
 	Settings ServerSettings `json:"settings"`
 
 	Stats *ServerStats `json:"stats,omitempty"`
@@ -91,7 +93,7 @@ const (
 )
 
 type ApiError struct {
-	Err   string `json:"error"`
+	Err     string `json:"error"`
 	Message string `json:"message"`
 }
 
