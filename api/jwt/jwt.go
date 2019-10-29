@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	"github.com/heroslender/panelmc/config"
+	"github.com/panelmc/daemon/config"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"

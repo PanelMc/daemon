@@ -3,7 +3,7 @@ package socket
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/googollee/go-socket.io"
-	"github.com/heroslender/panelmc/api/jwt"
+	"github.com/panelmc/daemon/api/jwt"
 	"github.com/sirupsen/logrus"
 )
 

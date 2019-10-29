@@ -1,12 +1,13 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/heroslender/panelmc/api/jwt"
-	"github.com/heroslender/panelmc/api/routes"
-	"github.com/heroslender/panelmc/api/socket"
-	"github.com/sirupsen/logrus"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/panelmc/daemon/api/jwt"
+	"github.com/panelmc/daemon/api/routes"
+	"github.com/panelmc/daemon/api/socket"
+	"github.com/sirupsen/logrus"
 )
 
 func Init() {
@@ -54,7 +55,6 @@ func Init() {
 		getLogger().Info("Listening on port 8080!")
 	}()
 }
-
 
 func getLogger() *logrus.Entry {
 	return logrus.WithField("logger", "API")

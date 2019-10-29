@@ -3,7 +3,7 @@ package routes
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/heroslender/panelmc/daemon"
+	"github.com/panelmc/daemon/daemon"
 	"net/http"
 )
 
