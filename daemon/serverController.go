@@ -2,8 +2,8 @@ package daemon
 
 import (
 	"encoding/json"
-	"github.com/heroslender/panelmc/api/socket"
-	"github.com/heroslender/panelmc/config"
+	"github.com/panelmc/daemon/api/socket"
+	"github.com/panelmc/daemon/config"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"log"

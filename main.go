@@ -1,6 +1,6 @@
 package main
 
-import "github.com/heroslender/panelmc/cmd"
+import "github.com/panelmc/daemon/cmd"
 
 func main() {
 	cmd.Execute()

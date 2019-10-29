@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/heroslender/panelmc/api"
-	"github.com/heroslender/panelmc/config"
-	"github.com/heroslender/panelmc/daemon"
+	"github.com/panelmc/daemon/api"
+	"github.com/panelmc/daemon/config"
+	"github.com/panelmc/daemon/daemon"
 	"os"
 	"os/signal"
 	"syscall"

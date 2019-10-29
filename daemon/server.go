@@ -1,8 +1,8 @@
 package daemon
 
 import (
-	"github.com/heroslender/panelmc/api/socket"
-	"github.com/heroslender/panelmc/config"
+	"github.com/panelmc/daemon/api/socket"
+	"github.com/panelmc/daemon/config"
 	"github.com/sirupsen/logrus"
 	"path/filepath"
 	"time"

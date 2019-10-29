@@ -4,7 +4,7 @@ import (
 	"code.cloudfoundry.org/bytefmt"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/heroslender/panelmc/api/socket"
+	"github.com/panelmc/daemon/api/socket"
 	"github.com/sirupsen/logrus"
 	"io"
 	"strings"

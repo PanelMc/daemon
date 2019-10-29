@@ -1,7 +1,7 @@
 package daemon
 
 import (
-	"github.com/heroslender/panelmc/api/socket"
+	"github.com/panelmc/daemon/api/socket"
 	"regexp"
 )
 
