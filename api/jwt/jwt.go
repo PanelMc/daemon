@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/panelmc/daemon/config"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	"time"
 )
 
 type TokenClaims struct {
@@ -18,6 +19,7 @@ type TokenClaims struct {
 	jwt.StandardClaims
 }
 
+// NewToken generates a mock token
 func NewToken() string {
 	claims := TokenClaims{
 		UserId:   "heroslender",
@@ -43,11 +45,12 @@ func NewToken() string {
 	return tokenString
 }
 
+// GinHandler - JWT check for gin middleware
 func GinHandler(c *gin.Context) {
 	if err := VerifyRequest(c.Request); err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 			"error": gin.H{
-				"error":   "unauthorized",
+				"error": "unauthorized",
 				//"message": "You need to login to access this content.",
 				// TODO remove for produtction
 				"message": err.Error(),
@@ -56,6 +59,12 @@ func GinHandler(c *gin.Context) {
 	}
 }
 
+// SocketHandler - JWT check for the socket middleware
+func SocketHandler(r *http.Request) (http.Header, error) {
+	return nil, VerifyRequest(r)
+}
+
+// VerifyRequest - Verify the request for valid token
 func VerifyRequest(r *http.Request) error {
 	token := r.Header.Get("Authorization")
 	if token == "" {
@@ -80,6 +89,7 @@ func VerifyRequest(r *http.Request) error {
 	return nil
 }
 
+// Verify and parse the token string
 func Verify(token string) (*jwt.Token, error) {
 	if token == "" {
 		return &jwt.Token{}, errors.New("Required authorization token not found")

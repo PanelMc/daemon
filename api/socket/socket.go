@@ -1,45 +1,53 @@
 package socket
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
-	"github.com/googollee/go-socket.io"
+	engineio "github.com/googollee/go-engine.io"
+	socketio "github.com/googollee/go-socket.io"
 	"github.com/panelmc/daemon/api/jwt"
 	"github.com/sirupsen/logrus"
 )
 
-var socket *socketio.Server
+var server *socketio.Server
 
+// Init initializes the web socket
 func Init() error {
 	var err error
-	socket, err = socketio.NewServer(nil)
+	server, err = socketio.NewServer(&engineio.Options{
+		RequestChecker: jwt.SocketHandler,
+		ConnInitor: func(r *http.Request, conn engineio.Conn) {
+			if serverName := r.FormValue("server"); serverName != "" {
+				r.Header.Add("server", serverName)
+			}
+		},
+	})
+
 	if err != nil {
 		logrus.WithError(err).Error("can't create socker server.")
 		return err
 	}
 
-	socket.SetAllowRequest(jwt.VerifyRequest)
-	socket.On("connection", func(so socketio.Socket) {
-		serverName := so.Request().FormValue("server")
-		if serverName != "" {
-			so.Join(serverName)
-			logrus.Infof("User connected to %s!", serverName)
+	server.OnConnect("/", func(conn socketio.Conn) error {
+		if server := conn.RemoteHeader().Get("server"); server != "" {
+			conn.Join(server)
+			logrus.Infof("User connected to %s!", conn.RemoteHeader().Get("server"))
 		}
 
-		so.Join("global")
-		so.Emit("connected")
-
-		so.On("console_input", func(msg string) {
-			// TODO
-		})
-
-		so.On("disconnection", func() {
-			// TODO
-		})
+		conn.Join("global")
+		return nil
 	})
 
-	socket.On("error", func(so socketio.Socket, err error) {
+	server.OnEvent("/server", "input", func(s socketio.Conn, server, command string) {
+
+	})
+	server.OnError("/", func(err error) {
 		logrus.WithError(err).Error("socker server error.")
 	})
+
+	go server.Serve()
+	defer server.Close()
 
 	return nil
 }
@@ -50,7 +58,7 @@ func Handler() gin.HandlerFunc {
 		origin := c.GetHeader("Origin")
 		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Header("Access-Control-Allow-Origin", origin)
-		socket.ServeHTTP(c.Writer, c.Request)
+		server.ServeHTTP(c.Writer, c.Request)
 	}
 }
 
@@ -59,9 +67,9 @@ func Broadcast(event string, messages ...interface{}) {
 	BroadcastTo("global", event, messages...)
 }
 
-// Broadcast a message to everyone in a specific room
+// BroadcastTo a message to everyone in a specific room
 func BroadcastTo(room, event string, messages ...interface{}) {
-	if socket != nil {
-		socket.BroadcastTo(room, event, messages...)
+	if server != nil {
+		server.BroadcastToRoom(room, event, messages...)
 	}
 }
