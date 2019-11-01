@@ -23,7 +23,6 @@ func Init() error {
 			}
 		},
 	})
-
 	if err != nil {
 		logrus.WithError(err).Error("can't create socker server.")
 		return err
@@ -47,7 +46,6 @@ func Init() error {
 	})
 
 	go server.Serve()
-	defer server.Close()
 
 	return nil
 }
@@ -60,6 +58,11 @@ func Handler() gin.HandlerFunc {
 		c.Header("Access-Control-Allow-Origin", origin)
 		server.ServeHTTP(c.Writer, c.Request)
 	}
+}
+
+// Close the socket server
+func Close() {
+	server.Close()
 }
 
 // Broadcast a message to everyone
