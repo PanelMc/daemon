@@ -4,3 +4,7 @@
 config\.json
 
 servers/
+
+vendor/
+
+Gopkg.lock
