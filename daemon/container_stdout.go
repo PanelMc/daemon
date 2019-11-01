@@ -1,19 +1,21 @@
 package daemon
 
 import (
-	"code.cloudfoundry.org/bytefmt"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/panelmc/daemon/api/socket"
-	"github.com/sirupsen/logrus"
 	"io"
 	"strings"
+
+	"code.cloudfoundry.org/bytefmt"
+	"github.com/gin-gonic/gin"
+	"github.com/panelmc/daemon/api/socket"
+	"github.com/panelmc/daemon/types"
+	"github.com/sirupsen/logrus"
 )
 
-var _ io.Writer = &ServerStruct{}
+var _ io.Writer = &Server{}
 
 // To copy stdout from the docker container, and read directly
-func (s *ServerStruct) Write(b []byte) (n int, e error) {
+func (s *Server) Write(b []byte) (n int, e error) {
 	//l := make([]byte, len(b))
 	//copy(l, b)
 	line := string(b)
@@ -33,19 +35,22 @@ func (s *ServerStruct) Write(b []byte) (n int, e error) {
 	}
 
 	processConsoleOutput(s, line)
-	payload := socket.ServerConsolePayload{s.Id, line}
-	logrus.WithField("server", s.Id).WithField("event", "Console").Infof("%#v", line)
-	socket.BroadcastTo(s.Id, "console_output", payload)
+	payload := socket.ServerConsolePayload{
+		ServerID: s.ID,
+		Line:     line,
+	}
+	logrus.WithField("server", s.ID).WithField("event", "Console").Infof("%#v", line)
+	socket.BroadcastTo(s.ID, "console_output", payload)
 
 	return len(b), nil
 }
 
-func (s *ServerStruct) UpdateStats(stats ContainerStats) {
+func (s *Server) UpdateStats(stats types.ContainerStats) {
 	s.Stats.Usage = stats
 	fStats := gin.H{
 		"cpu_percentage":    fmt.Sprintf("%.2f", stats.CPUPercentage),
 		"memory_percentage": fmt.Sprintf("%.2f", stats.MemoryPercentage),
-		"memory":           bytefmt.ByteSize(uint64(stats.Memory)),
+		"memory":            bytefmt.ByteSize(uint64(stats.Memory)),
 		"memory_limit":      bytefmt.ByteSize(uint64(stats.MemoryLimit)),
 		"network_download":  bytefmt.ByteSize(uint64(stats.NetworkDownload)),
 		"network_upload":    bytefmt.ByteSize(uint64(stats.NetworkUpload)),
@@ -53,5 +58,5 @@ func (s *ServerStruct) UpdateStats(stats ContainerStats) {
 		"disc_write":        bytefmt.ByteSize(uint64(stats.DiscWrite)),
 	}
 
-	socket.BroadcastTo(s.Id, "stats_update", socket.ServerStatsUpdatePayload{s.Id, fStats})
+	socket.BroadcastTo(s.ID, "stats_update", socket.ServerStatsUpdatePayload{s.ID, fStats})
 }

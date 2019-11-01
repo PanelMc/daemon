@@ -1,8 +1,9 @@
 package daemon
 
 import (
-	"github.com/panelmc/daemon/api/socket"
 	"regexp"
+
+	"github.com/panelmc/daemon/types"
 )
 
 type serverRegexMatch struct {
@@ -32,7 +33,7 @@ var bukkitRegex = &serverRegexMatch{
 	Message: regexp.MustCompile(`^\[[\d:]{8} (\w+)]: (.*?)`),
 }
 
-func processConsoleOutput(s *ServerStruct, output string) {
+func processConsoleOutput(s *Server, output string) {
 	if s.Type == "" {
 		if vanillaRegex.Message.MatchString(output) {
 			s.Type = "VANILLA"
@@ -54,7 +55,7 @@ func processConsoleOutput(s *ServerStruct, output string) {
 
 	match := r.Login.FindAllStringSubmatch(output, -1)
 	if len(match) > 0 {
-		player := &Player{
+		player := &types.Player{
 			Name: match[0][1],
 			Ip:   match[0][2],
 		}
@@ -69,37 +70,11 @@ func processConsoleOutput(s *ServerStruct, output string) {
 
 	match = r.Start.FindAllStringSubmatch(output, -1)
 	if len(match) > 0 {
-		s.UpdateStatus(ServerStatusOnline)
+		s.UpdateStatus(types.ServerStatusOnline)
 	}
 
 	match = r.Stop.FindAllStringSubmatch(output, -1)
 	if len(match) > 0 {
-		s.UpdateStatus(ServerStatusStopping)
+		s.UpdateStatus(types.ServerStatusStopping)
 	}
-}
-
-func (s *ServerStruct) onPlayerJoin(player *Player) {
-	s.Stats.OnlinePlayers = append(s.Stats.OnlinePlayers, player)
-
-	socket.Broadcast("player_join", socket.ServerPlayerJoinPayload{
-		ServerId: s.Id,
-		Player:   player,
-	})
-}
-
-func (s *ServerStruct) onPlayerLeave(name string) {
-	player := &Player{
-		Name: name,
-	}
-	for i, v := range s.Stats.OnlinePlayers {
-		if v.Name == name {
-			s.Stats.OnlinePlayers = append(s.Stats.OnlinePlayers[:i], s.Stats.OnlinePlayers[i+1:]...)
-			player = v
-		}
-	}
-
-	socket.Broadcast("player_leave", socket.ServerPlayerLeavePayload{
-		ServerId: s.Id,
-		Player:   player,
-	})
 }

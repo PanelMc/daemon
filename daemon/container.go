@@ -1,260 +1,61 @@
 package daemon
 
 import (
-	"code.cloudfoundry.org/bytefmt"
 	"context"
-	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/api/types/filters"
+
+	docker "github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"io"
-	"strings"
-	"time"
+	"github.com/panelmc/daemon/types"
 )
 
-func newDockerClient() (*client.Client, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		return cli, err
-	}
-	cli.NegotiateAPIVersion(context.TODO())
-	return cli, nil
+type IDockerContainer interface {
+	Create() error
+
+	Attach() error
+	Start() error
+	Stop() error
+
+	Exec(command string) error
 }
 
-func containerExists(cli *client.Client, containerId string) bool {
-	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{All: true})
-	if err != nil {
-		logrus.WithError(err).Errorf("Failed to check if the container '%s' exists.", containerId)
-		return false
-	}
+type DockerContainer struct {
+	ContainerID string `json:"container_id" jsonapi:"attr,container_id"`
+	Image       string `json:"image"`
 
-	// Check for ID
-	for _, c := range containers {
-		if c.ID == containerId {
-			return true
-		}
-	}
+	client *client.Client
 
-	// If got none by id, check by name
-	for _, c := range containers {
-		for _, name := range c.Names {
-			if name == containerId {
-				return true
-			}
-		}
-	}
+	attachedStats    bool
+	attached         bool
+	hijackedResponse docker.HijackedResponse
 
-	return false
+	server *Server
 }
 
-// Initialize the docker client and check container
-func NewDockerContainer(s *ServerStruct) error {
-	cli, err := newDockerClient()
+var _ IDockerContainer = &DockerContainer{}
+
+// NewDockerContainer - Initialize the docker client and check container
+func NewDockerContainer(s *Server) error {
+	cli, err := client.NewEnvClient()
 	if err != nil {
 		return err
 	}
 	s.Container.attached = false
 	s.Container.server = s
 	s.Container.client = cli
-	s.Stats = &ServerStats{
-		Status:        ServerStatusOffline,
-		OnlinePlayers: []*Player{},
+	s.Stats = &types.ServerStats{
+		Status:        types.ServerStatusOffline,
+		OnlinePlayers: []*types.Player{},
 	}
 
-	if _, err := cli.ContainerInspect(context.TODO(), s.Container.ContainerId); err != nil {
-		// Container wasn't found, setting to an empty string to create a new one later
-		s.Container.ContainerId = ""
+	// Container already has an ID, check if it exists
+	if s.Container.ContainerID != "" {
+		if _, err := cli.ContainerInspect(context.TODO(), s.Container.ContainerID); err != nil {
+			// Container wasn't found, setting to an empty string to create a new one later
+			s.Container.ContainerID = ""
+		}
 	}
 
 	s.Save()
 
 	return nil
-}
-
-func (c *DockerContainerStruct) Create() error {
-	if c.ContainerId != "" {
-		logrus.WithField("server", c.server.Id).
-			Error("WTF Mate, container already defined /facepalm")
-	}
-
-	portSet := nat.PortSet{}
-	portMap := nat.PortMap{}
-	for _, p := range c.server.Settings.Ports {
-		port := nat.Port(fmt.Sprintf("%d/%s", p, "tcp"))
-		portSet[port] = struct{}{}
-		portMap[port] = []nat.PortBinding{{"0.0.0.0", fmt.Sprintf("%d", p)}}
-	}
-
-	containerConfig := &container.Config{
-		Image:        "itzg/minecraft-server",
-		AttachStdin:  true,
-		OpenStdin:    true,
-		AttachStdout: true,
-		AttachStderr: true,
-		Tty:          true,
-		Hostname:     "daemon-" + c.server.Id,
-		ExposedPorts: portSet,
-		Volumes: map[string]struct{}{
-			"/data": {},
-		},
-		// TODO set ram on env variables
-		Env: []string{
-			"EULA=TRUE",
-			"PAPER_DOWNLOAD_URL=https://heroslender.com/assets/PaperSpigot-1.8.8.jar",
-			"TYPE=PAPER",
-			"VERSION=1.8.8",
-			"ENABLE_RCON=false",
-		},
-	}
-
-	path := strings.Replace(c.server.DataPath(), "C:\\", "/c/", 1)
-	path = strings.Replace(path, "\\", "/", -1)
-	path += ":/data"
-
-	memory, err := bytefmt.ToBytes(c.server.Settings.Ram)
-	if err != nil {
-		logrus.WithField("server", c.server.Id).Error("Failed to read server RAM, using default(1 Gigabyte).")
-		memory = 1073741824 // 1GB Default
-	}
-	swap, err := bytefmt.ToBytes(c.server.Settings.Swap)
-	if err != nil {
-		logrus.WithField("server", c.server.Id).Error("Failed to read server Swap, using default(1 Gigabyte).")
-		swap = 1073741824 // 1GB Default
-	}
-	containerHostConfig := &container.HostConfig{
-		Resources: container.Resources{
-			Memory:     int64(memory),
-			MemorySwap: int64(swap),
-		},
-		Binds:        []string{path},
-		PortBindings: portMap,
-	}
-
-	resContainer, err := c.client.ContainerCreate(context.TODO(), containerConfig, containerHostConfig, nil, containerConfig.Hostname)
-	if err != nil {
-		return err
-	}
-
-	c.ContainerId = resContainer.ID
-	c.server.Save()
-	return nil
-}
-
-func (c *DockerContainerStruct) listen() (<-chan events.Message, <-chan error) {
-	args := filters.NewArgs()
-	args.Add("type", events.ContainerEventType)
-	args.Add("container", c.ContainerId)
-	args.Add("event", "die")
-
-	return c.client.Events(context.TODO(), types.EventsOptions{
-		Filters: args,
-	})
-}
-
-func (c *DockerContainerStruct) Attach() error {
-	if c.attached {
-		return nil
-	}
-
-	var err error
-	c.hijackedResponse, err = c.client.ContainerAttach(context.TODO(), c.server.Container.ContainerId,
-		types.ContainerAttachOptions{
-			Stdin:  true,
-			Stdout: true,
-			Stderr: true,
-			Stream: true,
-		})
-
-	if err != nil {
-		return err
-	}
-	c.attached = true
-
-	go func() {
-		defer c.hijackedResponse.Close()
-		defer func() {
-			c.attached = false
-		}()
-
-		if _, err := io.Copy(c.server, c.hijackedResponse.Reader); err != nil {
-			logrus.WithField("server", c.server.Id).WithError(err).Error("Failed to attach to the server serverRoom!")
-		}
-	}()
-
-	go func() {
-		if !c.attachedStats {
-			stats := c.attachStats()
-			for {
-				c.server.UpdateStats(<-stats)
-			}
-		}
-	}()
-
-	go func() {
-		msg, err := c.listen()
-
-		go func() {
-			for {
-				select {
-				case message := <-msg:
-					if message.ID == c.ContainerId {
-						if message.Status == "die" {
-							c.server.onDie()
-						}
-					}
-					break
-				case erro := <-err:
-					logrus.WithField("server", c.server.Id).WithError(erro).Error("An error ocurred on the docker listener.")
-					break
-				}
-			}
-		}()
-	}()
-	return nil
-}
-
-func (c *DockerContainerStruct) Start() error {
-	if c.server.Stats.Status != ServerStatusOffline {
-		return errors.New(fmt.Sprintf("Server already running. Current status: %s", c.server.Stats.Status))
-	}
-
-	logrus.WithField("server", c.server.Id).Debug("Starting the server...")
-	if err := c.Attach(); err != nil {
-		logrus.WithError(err).Error("Failed to attach to the docker container.")
-	}
-
-	if err := c.client.ContainerStart(context.TODO(), c.server.Container.ContainerId, types.ContainerStartOptions{}); err != nil {
-		logrus.WithField("server", c.server.Id).Error("Failed to start the docker container.")
-		return err
-	}
-
-	return nil
-}
-
-func (c *DockerContainerStruct) Stop() error {
-	if c.server.Stats.Status != ServerStatusOnline {
-		return ApiError{
-			Err:     "stop_server_not_running",
-			Message: fmt.Sprintf("Server isn't running. Current status: %s", c.server.Stats.Status),
-		}
-	}
-
-	timeout := time.Duration(time.Second * 15)
-
-	if err := c.client.ContainerStop(context.TODO(), c.server.Container.ContainerId, &timeout); err != nil {
-		logrus.WithField("server", c.server.Id).Error("Failed to stop the docker container.")
-		return err
-	}
-
-	return nil
-}
-
-func (c *DockerContainerStruct) Exec(command string) error {
-	_, err := c.hijackedResponse.Conn.Write([]byte(command))
-	return err
 }

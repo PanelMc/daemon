@@ -76,11 +76,10 @@ func Init() {
 	go func() {
 		defer socket.Close()
 
+		getLogger().Info("Listening on port 8080...")
 		if err := router.Run(":8080"); err != nil {
 			getLogger().WithError(err).Error("Failed to start the daemon API.")
 		}
-
-		getLogger().Info("Listening on port 8080!")
 	}()
 }
 
