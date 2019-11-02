@@ -2,6 +2,10 @@ package socket
 
 import (
 	"net/http"
+	"net/url"
+	"strings"
+
+	"github.com/googollee/go-engine.io/transport/websocket"
 
 	"github.com/gin-gonic/gin"
 	engineio "github.com/googollee/go-engine.io"
@@ -15,6 +19,21 @@ var server *socketio.Server
 // Init initializes the web socket
 func Init() error {
 	var err error
+
+	// Fix CORS in go-socket.io
+	websocket.Default.CheckOrigin = func(r *http.Request) bool {
+		origin := r.Header["Origin"]
+		if len(origin) == 0 {
+			return true
+		}
+		u, err := url.Parse(origin[0])
+		if err != nil {
+			return false
+		}
+
+		return strings.EqualFold(u.Host, "localhost:25555")
+	}
+
 	server, err = socketio.NewServer(&engineio.Options{
 		RequestChecker: jwt.SocketHandler,
 		ConnInitor: func(r *http.Request, conn engineio.Conn) {
@@ -32,6 +51,8 @@ func Init() error {
 		if server := conn.RemoteHeader().Get("server"); server != "" {
 			conn.Join(server)
 			logrus.Infof("User connected to %s!", conn.RemoteHeader().Get("server"))
+		} else {
+			logrus.Info("User connected!")
 		}
 
 		conn.Join("global")
@@ -56,6 +77,8 @@ func Handler() gin.HandlerFunc {
 		origin := c.GetHeader("Origin")
 		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Header("Access-Control-Allow-Origin", origin)
+		c.Header("Access-Control-Allow-Methods", "POST, PUT, PATCH, GET, DELETE")
+		c.Header("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 		server.ServeHTTP(c.Writer, c.Request)
 	}
 }
