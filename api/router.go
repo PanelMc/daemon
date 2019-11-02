@@ -2,7 +2,10 @@ package api
 
 import (
 	"net/http"
+	"reflect"
 	"strings"
+
+	"github.com/panelmc/daemon/types"
 
 	"github.com/gin-gonic/gin"
 	"github.com/panelmc/daemon/api/jwt"
@@ -12,10 +15,11 @@ import (
 )
 
 func Init() {
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.RedirectTrailingSlash = true
 
-	router.Use(gin.Logger())
+	// router.Use(gin.Logger())
 	// Recover from a panic call :)
 	var noRouteHandlers []gin.HandlerFunc
 	router.Use(gin.Recovery())
@@ -34,19 +38,14 @@ func Init() {
 		c.HTML(http.StatusOK, "console.tmpl", gin.H{"token": jwt.NewToken()})
 	})
 
-	// Redirect /api to /api/v1
-	router.Any("/api", func(c *gin.Context) {
-		c.Request.URL.Path = "/api/v1"
-		router.HandleContext(c)
-	})
-
 	api := router.Group("/api/v1")
 	{
 		api.BasePath()
 		api.Use(jwt.GinHandler)
 		api.GET("", routes.Index)
-		api.GET("/servers", routes.ListServers)
-		api.GET("/servers/:server", routes.GetServer)
+		api.GET("/servers", handle(routes.ListServers))
+		api.POST("/servers", handle(routes.CreateServer))
+		api.GET("/servers/:server", handle(routes.GetServer))
 
 		noRouteHandlers = append(noRouteHandlers, func(c *gin.Context) {
 			if strings.HasPrefix(c.Request.URL.String(), api.BasePath()) {
@@ -81,6 +80,39 @@ func Init() {
 			getLogger().WithError(err).Error("Failed to start the daemon API.")
 		}
 	}()
+}
+
+func handle(handler types.HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := handler(c); err != nil {
+			switch e := err.(type) {
+			case types.APIError:
+				c.JSON(int(e.Code), gin.H{
+					"error": e,
+				})
+				break
+			default:
+				if reflect.Indirect(reflect.ValueOf(e)).NumField() > 1 {
+					c.JSON(http.StatusInternalServerError, gin.H{
+						"error": types.APIError{
+							Key:     "server-error",
+							Message: err.Error(),
+							Extras: types.APIErrorExtras{
+								"error": err,
+							},
+						},
+					})
+				} else {
+					c.JSON(http.StatusInternalServerError, gin.H{
+						"error": types.APIError{
+							Key:     "server-error",
+							Message: err.Error(),
+						},
+					})
+				}
+			}
+		}
+	}
 }
 
 func getLogger() *logrus.Entry {

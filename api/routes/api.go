@@ -1,48 +1,81 @@
 package routes
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
+
+	"github.com/panelmc/daemon/types"
+
 	"github.com/gin-gonic/gin"
 	"github.com/panelmc/daemon/daemon"
-	"net/http"
 )
 
+// Index - Route for GET /
 func Index(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"user": c.Request.Context().Value("jwt"),
 	})
 }
 
-func ListServers(c *gin.Context) {
+// CreateServer - Route for POST /server
+func CreateServer(c *gin.Context) error {
+	serverConfig := &types.ServerConfiguration{}
+	if err := json.Unmarshal([]byte(c.PostForm("server")), serverConfig); err != nil {
+		return types.APIError{
+			Code:    http.StatusBadRequest,
+			Key:     "server.create.error.invalid-configuration",
+			Message: "Failed to parse the configuration, please check your data.",
+			Extras: types.APIErrorExtras{
+				"error": err,
+			},
+		}
+	}
+
+	server := daemon.NewServer(serverConfig)
+	if err := server.Init(); err != nil {
+		return err
+	}
+
+	if err := server.Start(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ListServers - Route for GET /server
+func ListServers(c *gin.Context) error {
 	servers := daemon.GetServers()
 	if len(*servers) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": gin.H{
-				"error":   "no_servers_loaded",
-				"message": "There are no servers loaded.",
-			},
-		})
-		return
+		return types.APIError{
+			Code:    http.StatusOK,
+			Key:     "server.list.none-avaliable",
+			Message: "There are no servers loaded.",
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": servers,
 	})
+	return nil
 }
 
-func GetServer(c *gin.Context) {
+// GetServer - Route for GET /server/{id}
+func GetServer(c *gin.Context) error {
 	server := c.Param("server")
 
 	if s := daemon.GetServer(server); s != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"data": s,
 		})
-	} else {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": gin.H{
-				"error":   "server_not_fount",
-				"message": fmt.Sprintf("The server '%s' wasn't found.", server),
-			},
-		})
+
+		return nil
+	}
+
+	return types.APIError{
+		Code:    http.StatusNotFound,
+		Key:     "server.error.not-found",
+		Message: fmt.Sprintf("The server '%s' does not exist.", server),
 	}
 }

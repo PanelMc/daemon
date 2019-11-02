@@ -1,9 +1,17 @@
 package daemon
 
+import (
+	"strings"
+
+	"github.com/panelmc/daemon/types"
+)
+
+// ServerMap is an alias for map[string]*Server
 type ServerMap map[string]*Server
 
 var servers = make(ServerMap)
 
+// GetServers - Get all servers avaliable
 func GetServers() *ServerMap {
 	return &servers
 }
@@ -28,4 +36,24 @@ func GetServer(server string) *Server {
 	}
 
 	return nil
+}
+
+// NewServer - Create a new Server object based on the given configuration
+func NewServer(config *types.ServerConfiguration) *Server {
+	if config.ID == "" {
+		config.ID = strings.ReplaceAll(config.Name, " ", "_")
+	}
+
+	server := &Server{
+		ID:       config.ID,
+		Name:     config.Name,
+		Type:     config.Type,
+		Settings: config.Settings,
+		Container: DockerContainer{
+			ContainerID: config.Container.ContainerID,
+			Image:       config.Container.Image,
+		},
+	}
+
+	return server
 }

@@ -1,7 +1,7 @@
 package types
 
 type APIError struct {
-	Code    int16       `json:"code"`
+	Code    int16       `json:"-"`
 	Key     string      `json:"key"`
 	Message string      `json:"message"`
 	Extras  interface{} `json:"extras,omitempty"`
