@@ -32,16 +32,28 @@ func (c *DockerContainer) Create() error {
 		return err
 	}
 
+	containerConfig := parseContainerConfig(c)
+	containerHostConfig := parseHostConfig(c)
+
+	resContainer, err := c.client.ContainerCreate(ctx, containerConfig, containerHostConfig, nil, containerConfig.Hostname)
+	if err != nil {
+		return err
+	}
+
+	c.ContainerID = resContainer.ID
+	c.server.Save()
+	return nil
+}
+
+func parseContainerConfig(c *DockerContainer) *container.Config {
 	portSet := nat.PortSet{}
-	portMap := nat.PortMap{}
 	for _, p := range c.server.Settings.Ports {
 		port := nat.Port(fmt.Sprintf("%d/%s", p, "tcp"))
 		portSet[port] = struct{}{}
-		portMap[port] = []nat.PortBinding{{"0.0.0.0", fmt.Sprintf("%d", p)}}
 	}
 
 	containerConfig := &container.Config{
-		Image:        "itzg/minecraft-server",
+		Image:        c.Image,
 		AttachStdin:  true,
 		OpenStdin:    true,
 		AttachStdout: true,
@@ -62,8 +74,20 @@ func (c *DockerContainer) Create() error {
 		},
 	}
 
+	return containerConfig
+}
+
+func parseHostConfig(c *DockerContainer) *container.HostConfig {
+	portMap := nat.PortMap{}
+	for _, p := range c.server.Settings.Ports {
+		port := nat.Port(fmt.Sprintf("%d/%s", p, "tcp"))
+		portMap[port] = []nat.PortBinding{{"0.0.0.0", fmt.Sprintf("%d", p)}}
+	}
+
+	// fix windows path
 	path := strings.Replace(c.server.DataPath(), "C:\\", "/c/", 1)
 	path = strings.Replace(path, "\\", "/", -1)
+	// point to `/data` volume
 	path += ":/data"
 
 	memory, err := bytefmt.ToBytes(c.server.Settings.Ram)
@@ -85,12 +109,5 @@ func (c *DockerContainer) Create() error {
 		PortBindings: portMap,
 	}
 
-	resContainer, err := c.client.ContainerCreate(ctx, containerConfig, containerHostConfig, nil, containerConfig.Hostname)
-	if err != nil {
-		return err
-	}
-
-	c.ContainerID = resContainer.ID
-	c.server.Save()
-	return nil
+	return containerHostConfig
 }
