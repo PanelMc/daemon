@@ -50,12 +50,12 @@ func (s *Server) UpdateStats(stats types.ContainerStats) {
 	fStats := gin.H{
 		"cpu_percentage":    fmt.Sprintf("%.2f", stats.CPUPercentage),
 		"memory_percentage": fmt.Sprintf("%.2f", stats.MemoryPercentage),
-		"memory":            bytefmt.ByteSize(uint64(stats.Memory)),
-		"memory_limit":      bytefmt.ByteSize(uint64(stats.MemoryLimit)),
-		"network_download":  bytefmt.ByteSize(uint64(stats.NetworkDownload)),
-		"network_upload":    bytefmt.ByteSize(uint64(stats.NetworkUpload)),
-		"disc_read":         bytefmt.ByteSize(uint64(stats.DiscRead)),
-		"disc_write":        bytefmt.ByteSize(uint64(stats.DiscWrite)),
+		"memory":            bytefmt.ByteSize(stats.Memory),
+		"memory_limit":      bytefmt.ByteSize(stats.MemoryLimit),
+		"network_download":  bytefmt.ByteSize(stats.NetworkDownload),
+		"network_upload":    bytefmt.ByteSize(stats.NetworkUpload),
+		"disc_read":         bytefmt.ByteSize(stats.DiscRead),
+		"disc_write":        bytefmt.ByteSize(stats.DiscWrite),
 	}
 
 	socket.BroadcastTo(s.ID, "stats_update", socket.ServerStatsUpdatePayload{s.ID, fStats})

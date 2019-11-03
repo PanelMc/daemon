@@ -55,31 +55,24 @@ func (c *DockerContainer) attachStats() {
 }
 
 func mapStats(daemonOSType string, v *docker.StatsJSON) *types.ContainerStats {
-	var (
-		memPercent        = 0.0
-		cpuPercent        = 0.0
-		blkRead, blkWrite uint64 // Only used on Linux
-		mem               = 0.0
-		memLimit          = 0.0
-		memPerc           = 0.0
-	)
+	var cpuPercent, memPerc float64
+	var blkRead, blkWrite, mem, memLimit uint64
 
 	if daemonOSType != "windows" {
 		// MemoryStats.Limit will never be 0 unless the container is not running and we haven't
 		// got any data from cgroup
 		if v.MemoryStats.Limit != 0 {
-			memPercent = float64(v.MemoryStats.Usage) / float64(v.MemoryStats.Limit) * 100.0
+			memPerc = float64(v.MemoryStats.Usage) / float64(v.MemoryStats.Limit) * 100.0
 		}
 		cpuPercent = calculateCPUPercentUnix(v.PreCPUStats.CPUUsage.TotalUsage, v.PreCPUStats.SystemUsage, v)
 		blkRead, blkWrite = calculateBlockIO(v.BlkioStats)
-		mem = float64(v.MemoryStats.Usage)
-		memLimit = float64(v.MemoryStats.Limit)
-		memPerc = memPercent
+		mem = v.MemoryStats.Usage
+		memLimit = v.MemoryStats.Limit
 	} else {
 		cpuPercent = calculateCPUPercentWindows(v)
 		blkRead = v.StorageStats.ReadSizeBytes
 		blkWrite = v.StorageStats.WriteSizeBytes
-		mem = float64(v.MemoryStats.PrivateWorkingSet)
+		mem = v.MemoryStats.PrivateWorkingSet
 	}
 	netRx, netTx := calculateNetwork(v.Networks)
 
@@ -90,8 +83,8 @@ func mapStats(daemonOSType string, v *docker.StatsJSON) *types.ContainerStats {
 		MemoryLimit:      memLimit,
 		NetworkDownload:  netRx,
 		NetworkUpload:    netTx,
-		DiscRead:         float64(blkRead),
-		DiscWrite:        float64(blkWrite),
+		DiscRead:         blkRead,
+		DiscWrite:        blkWrite,
 	}
 }
 
@@ -138,12 +131,13 @@ func calculateBlockIO(blkio docker.BlkioStats) (blkRead uint64, blkWrite uint64)
 	return
 }
 
-func calculateNetwork(network map[string]docker.NetworkStats) (float64, float64) {
-	var rx, tx float64
+func calculateNetwork(network map[string]docker.NetworkStats) (uint64, uint64) {
+	var rx, tx uint64
 
 	for _, v := range network {
-		rx += float64(v.RxBytes)
-		tx += float64(v.TxBytes)
+		rx += v.RxBytes
+		tx += v.TxBytes
 	}
+
 	return rx, tx
 }
