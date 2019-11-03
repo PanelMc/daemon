@@ -49,5 +49,6 @@ func (s *Server) Init() error {
 			return err
 		}
 	}
+
 	return nil
 }

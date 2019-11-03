@@ -30,7 +30,7 @@ func GetServerByID(id string) *Server {
 // GetServer - Get a server by it's id or name. If no server found, return nil
 func GetServer(server string) *Server {
 	for _, s := range servers {
-		if s.ID == server || s.Name == server {
+		if s.ID == server || strings.EqualFold(s.Name, server) {
 			return s
 		}
 	}

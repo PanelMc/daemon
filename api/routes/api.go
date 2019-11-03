@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/panelmc/daemon/types"
 
 	"github.com/gin-gonic/gin"
@@ -33,13 +35,28 @@ func CreateServer(c *gin.Context) error {
 	}
 
 	server := daemon.NewServer(serverConfig)
-	if err := server.Init(); err != nil {
-		return err
+	if s := daemon.GetServerByID(server.ID); s != nil {
+		return types.APIError{
+			Code:    http.StatusBadRequest,
+			Key:     "server.create.error.id-in-use",
+			Message: fmt.Sprintf("The ID '%s' is already in use.", server.ID),
+		}
 	}
 
-	if err := server.Start(); err != nil {
-		return err
-	}
+	c.JSON(http.StatusOK, gin.H{
+		"data": "Creating the server...",
+	})
+
+	go func() {
+		if err := server.Init(); err != nil {
+			logrus.WithField("context", "API").WithError(err).Error("There was an unexpected error.")
+			return
+		}
+
+		if err := server.Start(); err != nil {
+			logrus.WithField("context", "API").WithError(err).Error("There was an unexpected error.")
+		}
+	}()
 
 	return nil
 }

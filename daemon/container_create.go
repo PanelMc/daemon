@@ -26,6 +26,12 @@ func (c *DockerContainer) Create() error {
 		}
 	}
 
+	ctx := context.Background()
+
+	if err := c.EnsureImage(ctx); err != nil {
+		return err
+	}
+
 	portSet := nat.PortSet{}
 	portMap := nat.PortMap{}
 	for _, p := range c.server.Settings.Ports {
@@ -79,7 +85,7 @@ func (c *DockerContainer) Create() error {
 		PortBindings: portMap,
 	}
 
-	resContainer, err := c.client.ContainerCreate(context.TODO(), containerConfig, containerHostConfig, nil, containerConfig.Hostname)
+	resContainer, err := c.client.ContainerCreate(ctx, containerConfig, containerHostConfig, nil, containerConfig.Hostname)
 	if err != nil {
 		return err
 	}
