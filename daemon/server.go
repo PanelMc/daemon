@@ -1,6 +1,8 @@
 package daemon
 
 import (
+	"context"
+
 	"github.com/panelmc/daemon/types"
 	"github.com/sirupsen/logrus"
 )
@@ -38,16 +40,12 @@ func (s *Server) Init() error {
 		return err
 	}
 
-	if s.Container.ContainerID == "" {
-		logrus.WithField("server", s.ID).Debug("Creating a new container...")
-
-		if err := s.Container.Create(); err != nil {
-			logrus.
-				WithField("server", s.ID).
-				WithError(err).
-				Error("Failed to create the docker container.")
-			return err
-		}
+	if err := s.Container.prepare(context.Background()); err != nil {
+		logrus.
+			WithField("server", s.ID).
+			WithError(err).
+			Error("Failed to prepare the container for the server.")
+		return err
 	}
 
 	return nil

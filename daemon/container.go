@@ -59,3 +59,27 @@ func NewDockerContainer(s *Server) error {
 
 	return nil
 }
+
+// Prepare the container, ensures image is pulled and creates the container
+func (c *DockerContainer) prepare(ctx context.Context) error {
+	if c.ContainerID != "" {
+		// Container already created?
+		if _, err := c.client.ContainerInspect(context.TODO(), c.ContainerID); err != nil {
+			// Container does not exist after all
+			return err
+		}
+
+		// It is created already, just return nil
+		return nil
+	}
+
+	if err := c.pullImage(ctx); err != nil {
+		return err
+	}
+
+	if err := c.Create(); err != nil {
+		return err
+	}
+
+	return nil
+}

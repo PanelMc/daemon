@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -26,7 +27,7 @@ type Event struct {
 
 var pendingImagePulls = []string{}
 
-func (c *DockerContainer) EnsureImage(ctx context.Context) error {
+func (c *DockerContainer) pullImage(ctx context.Context) error {
 	for _, img := range pendingImagePulls {
 		if strings.EqualFold(img, c.Image) {
 			return types.APIError{
@@ -59,6 +60,11 @@ func (c *DockerContainer) EnsureImage(ctx context.Context) error {
 		if err := d.Decode(&event); err != nil && err == io.EOF {
 			break
 		}
+	}
+
+	// Return error from last message if present
+	if event.Error != "" {
+		return errors.New(event.Error)
 	}
 
 	logrus.WithField("context", "Daemon").Infof("Image %s pulled!", c.Image)

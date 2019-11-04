@@ -28,10 +28,6 @@ func (c *DockerContainer) Create() error {
 
 	ctx := context.Background()
 
-	if err := c.EnsureImage(ctx); err != nil {
-		return err
-	}
-
 	containerConfig := parseContainerConfig(c)
 	containerHostConfig := parseHostConfig(c)
 
