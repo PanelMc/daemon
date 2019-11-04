@@ -1,6 +1,8 @@
 package daemon
 
 import (
+	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/panelmc/daemon/types"
@@ -39,9 +41,17 @@ func GetServer(server string) *Server {
 }
 
 // NewServer - Create a new Server object based on the given configuration
-func NewServer(config *types.ServerConfiguration) *Server {
+func NewServer(config *types.ServerConfiguration) (*Server, error) {
 	if config.ID == "" {
 		config.ID = strings.ReplaceAll(config.Name, " ", "_")
+	}
+
+	if s := GetServerByID(config.ID); s != nil {
+		return nil, types.APIError{
+			Code:    http.StatusBadRequest,
+			Key:     "server.create.error.id-in-use",
+			Message: fmt.Sprintf("The ID '%s' is already in use.", config.ID),
+		}
 	}
 
 	server := &Server{
@@ -55,5 +65,5 @@ func NewServer(config *types.ServerConfiguration) *Server {
 		},
 	}
 
-	return server
+	return server, nil
 }

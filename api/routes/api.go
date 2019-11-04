@@ -33,14 +33,9 @@ func CreateServer(c *gin.Context) error {
 			},
 		}
 	}
-
-	server := daemon.NewServer(serverConfig)
-	if s := daemon.GetServerByID(server.ID); s != nil {
-		return types.APIError{
-			Code:    http.StatusBadRequest,
-			Key:     "server.create.error.id-in-use",
-			Message: fmt.Sprintf("The ID '%s' is already in use.", server.ID),
-		}
+	server, err := daemon.NewServer(serverConfig)
+	if err != nil {
+		return err
 	}
 
 	c.JSON(http.StatusOK, gin.H{
