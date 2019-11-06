@@ -4,6 +4,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/panelmc/daemon/types"
+
 	docker "github.com/docker/docker/api/types"
 	"github.com/sirupsen/logrus"
 )
@@ -39,7 +41,18 @@ func (c *DockerContainer) Attach() error {
 		}
 	}()
 
-	go c.listenEvents()
+	go func() {
+		eventChan := c.listenEvents(context.Background())
+
+		for event := range eventChan {
+			if event.ContainerID == c.ContainerID {
+				if event.Event == types.EventTypeDie {
+					c.server.onDie()
+				}
+			}
+		}
+	}()
+
 	go c.attachStats()
 
 	return nil

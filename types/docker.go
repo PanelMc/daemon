@@ -15,3 +15,13 @@ type DockerContainerConfiguration struct {
 	ContainerID string `json:"container_id"`
 	Image       string `json:"image"`
 }
+
+type EventType string
+const (
+	EventTypeDie EventType = "die"
+) 
+
+type ContainerEvent struct {
+	ContainerID string
+	Event       EventType
+}
