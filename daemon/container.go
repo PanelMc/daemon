@@ -24,7 +24,6 @@ type DockerContainer struct {
 
 	client *client.Client
 
-	attachedStats    bool
 	attached         bool
 	hijackedResponse docker.HijackedResponse
 

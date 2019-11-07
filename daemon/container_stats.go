@@ -11,47 +11,54 @@ import (
 
 	docker "github.com/docker/docker/api/types"
 	"github.com/panelmc/daemon/types"
-	"github.com/sirupsen/logrus"
 )
 
-func (c *DockerContainer) attachStats() {
-	c.attachedStats = true
-	stats, err := c.client.ContainerStats(context.TODO(), c.ContainerID, true)
+func (c *DockerContainer) attachStats(ctx context.Context) (<-chan types.ContainerStats, error) {
+	stats, err := c.client.ContainerStats(ctx, c.ContainerID, true)
 	if err != nil {
-		logrus.WithField("server", c.server.ID).WithError(err).Error("Failed to read docker container stats.")
-		c.attachedStats = false
+		return nil, err
 	}
 
-	defer func() {
+	select {
+	case <-ctx.Done():
 		stats.Body.Close()
-		c.attachedStats = false
-	}()
+		return nil, nil
+	default:
+	}
 
-	daemonOSType := stats.OSType
-	dec := json.NewDecoder(stats.Body)
+	statsChan := make(chan types.ContainerStats)
 
-	for {
+	go func() {
+		defer func() {
+			close(statsChan)
+			stats.Body.Close()
+		}()
+
+		daemonOSType := stats.OSType
+		dec := json.NewDecoder(stats.Body)
 		var v *docker.StatsJSON
 
-		if err := dec.Decode(&v); err != nil {
-			if err == io.EOF {
-				// No more content
-				go func() {
-					time.Sleep(100 * time.Millisecond)
-					if !c.attachedStats {
-						c.attachStats()
-					}
-				}()
-				break
+		for {
+			if err := dec.Decode(&v); err != nil {
+				if err == io.EOF {
+					// No more content, exit loop and close everything
+					break
+				}
+
+				// Create a new decoder with the remaining data from the current decoder
+				// in combination with the stats stream reader
+				dec = json.NewDecoder(io.MultiReader(dec.Buffered(), stats.Body))
+
+				// Update the stats every second
+				time.Sleep(1000 * time.Millisecond)
+				continue
 			}
 
-			dec = json.NewDecoder(io.MultiReader(dec.Buffered(), stats.Body))
-			time.Sleep(100 * time.Millisecond)
-			continue
+			statsChan <- *mapStats(daemonOSType, v)
 		}
+	}()
 
-		c.server.UpdateStats(*mapStats(daemonOSType, v))
-	}
+	return statsChan, nil
 }
 
 func mapStats(daemonOSType string, v *docker.StatsJSON) *types.ContainerStats {

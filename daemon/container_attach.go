@@ -53,7 +53,16 @@ func (c *DockerContainer) Attach() error {
 		}
 	}()
 
-	go c.attachStats()
+	go func() {
+		statsChan, err := c.attachStats(context.Background())
+		if err != nil {
+			logrus.WithField("server", c.server.Name).WithError(err).Error("There was an error trying to listen to the container stats")
+		}
+
+		for stats := range statsChan {
+			c.server.UpdateStats(stats)
+		}
+	}()
 
 	return nil
 }
