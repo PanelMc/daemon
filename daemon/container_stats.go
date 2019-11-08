@@ -13,7 +13,7 @@ import (
 	"github.com/panelmc/daemon/types"
 )
 
-func (c *DockerContainer) attachStats(ctx context.Context) (<-chan types.ContainerStats, error) {
+func (c *DockerContainer) attachStats(ctx context.Context, delay time.Duration) (<-chan *types.ContainerStats, error) {
 	stats, err := c.client.ContainerStats(ctx, c.ContainerID, true)
 	if err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func (c *DockerContainer) attachStats(ctx context.Context) (<-chan types.Contain
 	default:
 	}
 
-	statsChan := make(chan types.ContainerStats)
+	statsChan := make(chan *types.ContainerStats)
 
 	go func() {
 		defer func() {
@@ -49,12 +49,11 @@ func (c *DockerContainer) attachStats(ctx context.Context) (<-chan types.Contain
 				// in combination with the stats stream reader
 				dec = json.NewDecoder(io.MultiReader(dec.Buffered(), stats.Body))
 
-				// Update the stats every second
-				time.Sleep(1000 * time.Millisecond)
+				time.Sleep(delay)
 				continue
 			}
 
-			statsChan <- *mapStats(daemonOSType, v)
+			statsChan <- mapStats(daemonOSType, v)
 		}
 	}()
 

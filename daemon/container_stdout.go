@@ -45,8 +45,8 @@ func (s *Server) Write(b []byte) (n int, e error) {
 	return len(b), nil
 }
 
-func (s *Server) UpdateStats(stats types.ContainerStats) {
-	s.Stats.Usage = stats
+func (s *Server) UpdateStats(stats *types.ContainerStats) {
+	s.Stats.Usage = *stats
 	fStats := gin.H{
 		"cpu_percentage":    fmt.Sprintf("%.2f", stats.CPUPercentage),
 		"memory_percentage": fmt.Sprintf("%.2f", stats.MemoryPercentage),
@@ -58,5 +58,8 @@ func (s *Server) UpdateStats(stats types.ContainerStats) {
 		"disc_write":        bytefmt.ByteSize(stats.DiscWrite),
 	}
 
-	socket.BroadcastTo(s.ID, "stats_update", socket.ServerStatsUpdatePayload{s.ID, fStats})
+	socket.BroadcastTo(s.ID, "stats_update", socket.ServerStatsUpdatePayload{
+		ServerID: s.ID,
+		Stats:    fStats,
+	})
 }

@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"time"
 	"context"
 	"io"
 
@@ -54,7 +55,7 @@ func (c *DockerContainer) Attach() error {
 	}()
 
 	go func() {
-		statsChan, err := c.attachStats(context.Background())
+		statsChan, err := c.attachStats(context.Background(), 1 * time.Second)
 		if err != nil {
 			logrus.WithField("server", c.server.Name).WithError(err).Error("There was an error trying to listen to the container stats")
 		}
