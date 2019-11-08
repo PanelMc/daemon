@@ -8,7 +8,6 @@ import (
 	docker "github.com/docker/docker/api/types"
 	"github.com/panelmc/daemon/types"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 func (c *DockerContainer) Start() error {
@@ -16,13 +15,13 @@ func (c *DockerContainer) Start() error {
 		return errors.New(fmt.Sprintf("Server already running. Current status: %s", c.server.Stats.Status))
 	}
 
-	logrus.WithField("server", c.server.ID).Debug("Starting the server...")
+	c.server.Logger().Debug("Starting the server...")
 	if err := c.Attach(); err != nil {
-		logrus.WithError(err).Error("Failed to attach to the docker container.")
+		c.server.Logger().WithError(err).Error("Failed to attach to the docker container.")
 	}
 
 	if err := c.client.ContainerStart(context.TODO(), c.server.Container.ContainerID, docker.ContainerStartOptions{}); err != nil {
-		logrus.WithField("server", c.server.ID).Error("Failed to start the docker container.")
+		c.server.Logger().Error("Failed to start the docker container.")
 		return err
 	}
 
@@ -41,7 +40,7 @@ func (c *DockerContainer) Stop() error {
 	timeout := time.Duration(time.Second * 15)
 
 	if err := c.client.ContainerStop(context.TODO(), c.server.Container.ContainerID, &timeout); err != nil {
-		logrus.WithField("server", c.server.ID).Error("Failed to stop the docker container.")
+		c.server.Logger().Error("Failed to stop the docker container.")
 		return err
 	}
 

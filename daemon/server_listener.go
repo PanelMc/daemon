@@ -5,7 +5,6 @@ import (
 
 	"github.com/panelmc/daemon/api/socket"
 	"github.com/panelmc/daemon/types"
-	"github.com/sirupsen/logrus"
 )
 
 func (s *Server) onPlayerJoin(player *types.Player) {
@@ -49,14 +48,14 @@ func (s *Server) onDie() {
 			ServerID: s.ID,
 			Line:     "Server stopped! Restarting in 5 seconds...",
 		}
-		logrus.WithField("server", s.ID).WithField("event", "Console").Info(payload.Line)
+		s.Logger().WithField("event", "Console").Info(payload.Line)
 		socket.BroadcastTo(s.ID, "console_output", payload)
 
 		go func() {
 			time.Sleep(5 * time.Second)
 			if s.Stats.Status == types.ServerStatusOffline {
 				if err := s.Start(); err != nil {
-					logrus.WithField("server", s.ID).WithError(err).Error("There was an error while trying to start the server.")
+					s.Logger().WithError(err).Error("There was an error while trying to start the server.")
 				}
 			}
 		}()

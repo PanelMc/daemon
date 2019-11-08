@@ -1,14 +1,13 @@
 package daemon
 
 import (
-	"time"
 	"context"
 	"io"
+	"time"
 
 	"github.com/panelmc/daemon/types"
 
 	docker "github.com/docker/docker/api/types"
-	"github.com/sirupsen/logrus"
 )
 
 // Attach to the given container stdout and live usage stats
@@ -38,7 +37,7 @@ func (c *DockerContainer) Attach() error {
 		}()
 
 		if _, err := io.Copy(c.server, c.hijackedResponse.Reader); err != nil {
-			logrus.WithField("server", c.server.ID).WithError(err).Error("Failed to attach to the server serverRoom!")
+			c.server.Logger().WithError(err).Error("Failed to attach to the server serverRoom!")
 		}
 	}()
 
@@ -55,9 +54,9 @@ func (c *DockerContainer) Attach() error {
 	}()
 
 	go func() {
-		statsChan, err := c.attachStats(context.Background(), 1 * time.Second)
+		statsChan, err := c.attachStats(context.Background(), 1*time.Second)
 		if err != nil {
-			logrus.WithField("server", c.server.Name).WithError(err).Error("There was an error trying to listen to the container stats")
+			c.server.Logger().WithError(err).Error("There was an error trying to listen to the container stats")
 		}
 
 		for stats := range statsChan {

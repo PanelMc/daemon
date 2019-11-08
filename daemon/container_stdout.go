@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/panelmc/daemon/api/socket"
 	"github.com/panelmc/daemon/types"
-	"github.com/sirupsen/logrus"
 )
 
 var _ io.Writer = &Server{}
@@ -39,7 +38,7 @@ func (s *Server) Write(b []byte) (n int, e error) {
 		ServerID: s.ID,
 		Line:     line,
 	}
-	logrus.WithField("server", s.ID).WithField("event", "Console").Infof("%#v", line)
+	s.Logger().WithField("event", "Console").Infof("%#v", line)
 	socket.BroadcastTo(s.ID, "console_output", payload)
 
 	return len(b), nil

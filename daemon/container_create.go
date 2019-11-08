@@ -10,7 +10,6 @@ import (
 	"code.cloudfoundry.org/bytefmt"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
-	"github.com/sirupsen/logrus"
 )
 
 // Create a new Docker Container based on this configuration
@@ -88,12 +87,12 @@ func parseHostConfig(c *DockerContainer) *container.HostConfig {
 
 	memory, err := bytefmt.ToBytes(c.server.Settings.Ram)
 	if err != nil {
-		logrus.WithField("server", c.server.ID).Error("Failed to read server RAM, using default(1 Gigabyte).")
+		c.server.Logger().Error("Failed to read server RAM, using default(1 Gigabyte).")
 		memory = 1073741824 // 1GB Default
 	}
 	swap, err := bytefmt.ToBytes(c.server.Settings.Swap)
 	if err != nil {
-		logrus.WithField("server", c.server.ID).Error("Failed to read server Swap, using default(1 Gigabyte).")
+		c.server.Logger().Error("Failed to read server Swap, using default(1 Gigabyte).")
 		swap = 1073741824 // 1GB Default
 	}
 	containerHostConfig := &container.HostConfig{

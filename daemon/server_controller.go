@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"github.com/panelmc/daemon/types"
-	"github.com/sirupsen/logrus"
 )
 
 func (s *Server) Start() error {
@@ -52,7 +51,7 @@ func (s *Server) Execute(command string) error {
 		}
 	}
 
-	logrus.WithField("server", s.Name).Infof("Executed console command /%s", command)
+	s.Logger().Infof("Executed console command /%s", command)
 	return nil
 }
 

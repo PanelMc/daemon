@@ -41,12 +41,16 @@ func (s *Server) Init() error {
 	}
 
 	if err := s.Container.prepare(context.Background()); err != nil {
-		logrus.
-			WithField("server", s.ID).
+		s.Logger().
 			WithError(err).
 			Error("Failed to prepare the container for the server.")
 		return err
 	}
 
 	return nil
+}
+
+// Logger returns a logger with the server name as a field
+func (s *Server) Logger() *logrus.Entry {
+	return logrus.WithField("server", s.Name)
 }
