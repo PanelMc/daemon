@@ -31,7 +31,7 @@ func Init() error {
 			return false
 		}
 
-		return strings.EqualFold(u.Host, "localhost:25555")
+		return strings.EqualFold(u.Host, "localhost:25555") || strings.EqualFold(u.Host, "localhost:8080")
 	}
 
 	server, err = socketio.NewServer(&engineio.Options{

@@ -26,20 +26,20 @@ func (s *Server) Write(b []byte) (n int, e error) {
 		return 2, nil
 	}
 
-	if strings.Contains(line, "\r") {
-		line = strings.Replace(line, "\r", "", -1)
-	}
-	if strings.Contains(line, "\n") {
-		line = strings.Replace(line, "\n", "", -1)
-	}
+	line = strings.ReplaceAll(line, "\r", "")
+	line = strings.ReplaceAll(line, "\t", "")
+	line = strings.TrimSpace(line)
+	line = strings.TrimSuffix(line, "\n")
 
-	processConsoleOutput(s, line)
-	payload := socket.ServerConsolePayload{
-		ServerID: s.ID,
-		Line:     line,
+	for _, l := range strings.Split(line, "\n") {
+		processConsoleOutput(s, l)
+		payload := socket.ServerConsolePayload{
+			ServerID: s.ID,
+			Line:     l,
+		}
+		s.Logger().WithField("event", "Console").Infof("%#v", l)
+		socket.BroadcastTo(s.ID, "console_output", payload)
 	}
-	s.Logger().WithField("event", "Console").Infof("%#v", line)
-	socket.BroadcastTo(s.ID, "console_output", payload)
 
 	return len(b), nil
 }
