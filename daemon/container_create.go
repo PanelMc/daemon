@@ -76,7 +76,7 @@ func parseHostConfig(c *DockerContainer) *container.HostConfig {
 	portMap := nat.PortMap{}
 	for _, p := range c.server.Settings.Ports {
 		port := nat.Port(fmt.Sprintf("%d/%s", p, "tcp"))
-		portMap[port] = []nat.PortBinding{{"0.0.0.0", fmt.Sprintf("%d", p)}}
+		portMap[port] = []nat.PortBinding{{HostIP: "0.0.0.0", HostPort: fmt.Sprintf("%d", p)}}
 	}
 
 	// fix windows path
