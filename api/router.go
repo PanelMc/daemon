@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/panelmc/daemon/infra"
 	"github.com/panelmc/daemon/types"
 
 	"github.com/gin-gonic/gin"
@@ -14,13 +15,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func Init() {
-	gin.SetMode(gin.ReleaseMode)
-	router := gin.New()
-	router.RedirectTrailingSlash = true
-
-	// router.Use(gin.Logger())
-	// Recover from a panic call :)
+func Init(server *infra.Server) {
+	router := server.Router
 	var noRouteHandlers []gin.HandlerFunc
 	router.Use(gin.Recovery())
 
@@ -76,7 +72,7 @@ func Init() {
 		defer socket.Close()
 
 		getLogger().Info("Listening on port 8080...")
-		if err := router.Run(":8080"); err != nil {
+		if err := server.Start(); err != nil {
 			getLogger().WithError(err).Error("Failed to start the daemon API.")
 		}
 	}()

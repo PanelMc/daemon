@@ -72,3 +72,7 @@
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  name = "github.com/itsjamie/gin-cors"
+  version = "1.0.0"
